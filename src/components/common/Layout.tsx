@@ -16,11 +16,16 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const location = useLocation();
   const copy =
     pageCopy[location.pathname] ||
-    (location.pathname.includes("/questions")
-      ? { breadcrumbs: ["Test Creation", "Add Questions"] }
-      : location.pathname.includes("/preview")
-        ? { breadcrumbs: ["Test Creation", "Preview & Publish"] }
-        : { breadcrumbs: ["Test Creation"] });
+    (location.pathname.startsWith("/edit-test/")
+      ? {
+          breadcrumbs: ["Test Creation", "Edit Test"],
+          tabs: ["Chapterwise", "PYQ", "Mock Test"],
+        }
+      : location.pathname.includes("/questions")
+        ? { breadcrumbs: ["Test Creation", "Add Questions"] }
+        : location.pathname.includes("/preview")
+          ? { breadcrumbs: ["Test Creation", "Preview & Publish"] }
+          : { breadcrumbs: ["Test Creation"] });
 
   const [open, setOpen] = useState(false);
 
@@ -105,24 +110,7 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
               alt="Preproute"
               className="mb-3 h-7 w-auto lg:hidden"
             />
-            <div className="flex flex-wrap items-center gap-2 text-sm text-[#667085]">
-              {copy.breadcrumbs.map((crumb, index) => (
-                <React.Fragment key={crumb}>
-                  {index > 0 && <span className="text-[#cbd5e1]">/</span>}
-                  <span
-                    className={
-                      index === copy.breadcrumbs.length - 1
-                        ? "font-semibold text-[#111827]"
-                        : ""
-                    }
-                  >
-                    {crumb}
-                  </span>
-                </React.Fragment>
-              ))}
-            </div>
           </div>
-
           <div className="flex shrink-0 items-center gap-2">
             <button
               type="button"
@@ -197,7 +185,24 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
             </div>
           </div>
         </div>
-
+      </header>
+      <main className={`pb-8 pt-24 h-screen bg-white lg:ml-56`}>
+        <div className="flex flex-wrap items-center gap-2 text-sm text-[#667085] px-4 mb-4">
+          {copy.breadcrumbs.map((crumb, index) => (
+            <React.Fragment key={crumb}>
+              {index > 0 && <span className="text-[#cbd5e1]">/</span>}
+              <span
+                className={
+                  index === copy.breadcrumbs.length - 1
+                    ? "font-semibold text-[#111827]"
+                    : ""
+                }
+              >
+                {crumb}
+              </span>
+            </React.Fragment>
+          ))}
+        </div>
         {copy.tabs && (
           <div className="flex gap-1 overflow-x-auto px-2 border w-fit mx-4 rounded-2xl border-gray-300 mb-2">
             {copy.tabs.map((tab, index) => (
@@ -215,10 +220,6 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
             ))}
           </div>
         )}
-      </header>
-      <main
-        className={`pb-8 pt-24 h-screen bg-white lg:ml-56 ${copy.tabs ? "lg:pt-36 pt-40" : "lg:pt-28"}`}
-      >
         {children}
       </main>
     </div>

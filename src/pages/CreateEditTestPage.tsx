@@ -155,27 +155,87 @@ const CreateEditTestPage = () => {
       return;
     }
     setIsEditMode(true);
-    const abortController = new AbortController();
-    const fetchTest = async () => {
+
+    const fetchTestAndDependencies = async () => {
       setLoading(true);
       try {
-        const res = await api.getTestById(id);
-        if (res.data.status === "success") {
-          const test = res.data.data;
-          console.log("Fetched test:", test);
-          setCurrentTest(test);
-          setValue("name", test.name || "");
-          setValue("subject", test.subject || "");
-          setValue("type", test.type || "chapterwise");
-          setValue("topics", test.topics || []);
-          setValue("sub_topics", test.sub_topics || []);
-          setValue("difficulty", test.difficulty || "medium");
-          setValue("correct_marks", test.correct_marks || 5);
-          setValue("wrong_marks", test.wrong_marks || -1);
-          setValue("unattempt_marks", test.unattempt_marks || 0);
-          setValue("total_time", test.total_time || 60);
-          setValue("total_marks", test.total_marks || 250);
-          setValue("total_questions", test.total_questions || 50);
+        const testRes = await api.getTestById(id);
+        if (testRes.data.status !== "success")
+          throw new Error("Failed to fetch test");
+        const test = testRes.data.data;
+        setCurrentTest(test);
+        let loadedSubjects = subjects;
+        if (subjects.length === 0) {
+          const subjectsRes = await api.getSubjects();
+          if (
+            subjectsRes.data?.status === "success" &&
+            Array.isArray(subjectsRes.data.data)
+          ) {
+            loadedSubjects = subjectsRes.data.data;
+            setSubjects(loadedSubjects);
+          }
+        }
+        setValue("name", test.name || "", { shouldValidate: false });
+        setValue("type", test.type || "chapterwise", { shouldValidate: false });
+        setValue("difficulty", test.difficulty || "medium", {
+          shouldValidate: false,
+        });
+        setValue("correct_marks", test.correct_marks ?? 5, {
+          shouldValidate: false,
+        });
+        setValue("wrong_marks", test.wrong_marks ?? -1, {
+          shouldValidate: false,
+        });
+        setValue("unattempt_marks", test.unattempt_marks ?? 0, {
+          shouldValidate: false,
+        });
+        setValue("total_time", test.total_time ?? 60, {
+          shouldValidate: false,
+        });
+        setValue("total_marks", test.total_marks ?? 250, {
+          shouldValidate: false,
+        });
+        setValue("total_questions", test.total_questions ?? 50, {
+          shouldValidate: false,
+        });
+        const subjectId =
+          loadedSubjects.find((subj) => subj.name === test.subject)?.id || "";
+        setValue("subject", subjectId, { shouldValidate: false });
+        if (subjectId) {
+          const topicsRes = await api.getTopicsBySubject(subjectId);
+          if (
+            topicsRes.data?.status === "success" &&
+            Array.isArray(topicsRes.data.data)
+          ) {
+            const fetchedTopics = topicsRes.data.data;
+            setTopics(fetchedTopics);
+            if (test.topics && test.topics.length > 0) {
+              const topicIds = fetchedTopics
+                .filter((topic: Topic) => test.topics.includes(topic.name))
+                .map((topic: Topic) => topic.id);
+              setValue("topics", topicIds, { shouldValidate: false });
+              if (topicIds.length > 0) {
+                const subTopicsRes = await api.getSubTopicsByTopics(topicIds);
+                if (
+                  subTopicsRes.data?.status === "success" &&
+                  Array.isArray(subTopicsRes.data.data)
+                ) {
+                  const fetchedSubTopics = subTopicsRes.data.data;
+                  setSubTopics(fetchedSubTopics);
+                  if (test.sub_topics && test.sub_topics.length > 0) {
+                    const subTopicIds = fetchedSubTopics
+                      .filter((subTopic: SubTopic) =>
+                        test.sub_topics.includes(subTopic.name),
+                      )
+                      .map((subTopic: SubTopic) => subTopic.id);
+                    setValue("sub_topics", subTopicIds, {
+                      shouldValidate: false,
+                    });
+                  }
+                }
+              }
+            }
+          }
         }
       } catch (err) {
         if ((err as Error).name !== "AbortError") {
@@ -185,9 +245,8 @@ const CreateEditTestPage = () => {
         setLoading(false);
       }
     };
-    void fetchTest();
-    return () => abortController.abort();
-  }, [id, setValue, setCurrentTest, clearQuestions]);
+    void fetchTestAndDependencies();
+  }, [id, setValue, setCurrentTest, clearQuestions, subjects.length, subjects]);
 
   const onSubmit = async (data: TestFormData) => {
     setLoading(true);
@@ -237,7 +296,7 @@ const CreateEditTestPage = () => {
     <section className="space-y-6 text-left h-full">
       <form
         onSubmit={handleSubmit(onSubmit)}
-        className="bg-white p-4 sm:p-6 lg:p-8 h-full"
+        className="bg-white p-4 sm:p-6 h-full"
       >
         <div className="grid gap-x-8 gap-y-6 lg:grid-cols-2">
           <div>

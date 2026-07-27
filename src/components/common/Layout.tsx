@@ -1,6 +1,10 @@
 import React, { useEffect, useState } from "react";
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import { useAuthStore } from "../../store/authStore";
+import dashboardIcon from "../../assets/dashboard.svg";
+import bookCreationIcon from "../../assets/book-creation.svg";
+import testTrackingIcon from "../../assets/test-tracking.svg";
+import notificationIcon from "../../assets/notification.svg";
 
 const pageCopy: Record<string, { breadcrumbs: string[]; tabs?: string[] }> = {
   "/": { breadcrumbs: ["Test Creation", "Dashboard"] },
@@ -67,11 +71,7 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
               }`
             }
           >
-            <img
-              src={"../../src/assets/dashboard.svg"}
-              alt="Dashboard"
-              className="h-4 w-4"
-            />
+            <img src={dashboardIcon} alt="Dashboard" className="h-4 w-4" />
             Dashboard
           </NavLink>
           <NavLink
@@ -85,7 +85,7 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
             }
           >
             <img
-              src={"../../src/assets/book-creation.svg"}
+              src={bookCreationIcon}
               alt="Book Creation"
               className="h-4 w-4"
             />
@@ -93,7 +93,7 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
           </NavLink>
           <button className="flex h-11 w-full items-center gap-3 rounded-[6px] px-4 text-left text-sm font-medium text-[#667085] transition hover:bg-[#f8fafc] hover:text-[#111827]">
             <img
-              src={"../../src/assets/test-tracking.svg"}
+              src={testTrackingIcon}
               alt="Test Tracking"
               className="h-4 w-4"
             />
@@ -118,7 +118,7 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
               aria-label="Notifications"
             >
               <img
-                src={"../../src/assets/notification.svg"}
+                src={notificationIcon}
                 alt="Test Tracking"
                 className="h-5 w-5"
               />

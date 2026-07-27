@@ -5,6 +5,11 @@ import { useTestStore } from "../store/testStore";
 import { api } from "../api/endpoints";
 import type { Question, Subject, SubTopic, Topic } from "../types";
 import CustomSelect from "../components/common/CustomSelect.tsx";
+import clockIcon from "../assets/clock.svg";
+import quizIcon from "../assets/quiz.svg";
+import leaderboardIcon from "../assets/leaderboard.svg";
+import deleteIcon from "../assets/delete.svg";
+import downloadIcon from "../assets/download.svg";
 
 const difficultyOptions = [
   { id: "easy", name: "Easy" },
@@ -394,7 +399,7 @@ const AddQuestionsPage = () => {
               <div className="flex flex-wrap items-center gap-3 self-end rounded-[6px] border border-[#eef1f5] px-3 py-2 text-sm font-semibold text-[#667085]">
                 <span className="flex items-center gap-1">
                   <img
-                    src={"../../src/assets/clock.svg"}
+                    src={clockIcon}
                     alt="Book Creation"
                     className="h-4 w-4"
                   />
@@ -402,17 +407,13 @@ const AddQuestionsPage = () => {
                 </span>
                 <span className="h-5 w-px bg-[#e4e8ef]" />
                 <span className="flex items-center gap-1">
-                  <img
-                    src={"../../src/assets/quiz.svg"}
-                    alt="Book Creation"
-                    className="h-4 w-4"
-                  />
+                  <img src={quizIcon} alt="Book Creation" className="h-4 w-4" />
                   {totalQuestions} Q's
                 </span>
                 <span className="h-5 w-px bg-[#e4e8ef]" />
                 <span className="flex items-center gap-1">
                   <img
-                    src={"../../src/assets/leaderboard.svg"}
+                    src={leaderboardIcon}
                     alt="Book Creation"
                     className="h-4 w-4"
                   />
@@ -439,7 +440,7 @@ const AddQuestionsPage = () => {
                 className="h-10 rounded-[6px] bg-[#fafafa] px-4 text-sm font-semibold text-[#98a2b3] flex items-center gap-2"
               >
                 <img
-                  src={"../../src/assets/download.svg"}
+                  src={downloadIcon}
                   alt="Book Creation"
                   className="h-5 w-5"
                 />{" "}
@@ -453,11 +454,7 @@ const AddQuestionsPage = () => {
             onClick={handleCancelEdit}
             className="text-sm font-semibold text-[#ff7479] flex items-center gap-2 bg-red-50 p-1.5 rounded-md transition"
           >
-            <img
-              src={"../../src/assets/delete.svg"}
-              alt="Book Creation"
-              className="h-4 w-4"
-            />{" "}
+            <img src={deleteIcon} alt="Book Creation" className="h-4 w-4" />{" "}
             Delete All Edits
           </button>
 

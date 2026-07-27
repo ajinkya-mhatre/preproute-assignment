@@ -566,26 +566,6 @@ const AddQuestionsPage = () => {
               </button>
             </div>
           </div>
-
-          <div className="flex items-center justify-center gap-40 py-2 text-[#a7afbd]">
-            <button
-              type="button"
-              className="text-2xl"
-              aria-label="Previous question"
-            >
-              ‹
-            </button>
-            <button
-              type="submit"
-              className="text-2xl"
-              aria-label={
-                editingIndex !== null ? "Update question" : "Add question"
-              }
-            >
-              ›
-            </button>
-          </div>
-
           <div className="space-y-5">
             <h3 className="text-base font-bold text-[#4b5568]">
               Question settings
@@ -730,15 +710,26 @@ const AddQuestionsPage = () => {
           >
             Exit Test Creation
           </button>
-          <button
-            type="button"
-            onClick={handleSaveAndContinue}
-            className="btn-primary flex h-12 min-w-[176px] items-center justify-center gap-2 bg-[#7284ff] hover:bg-[#6175f2]"
-            disabled={submitting || questions.length === 0}
-          >
-            {submitting ? <span className="spinner h-4 w-4"></span> : null}
-            {submitting ? "Saving..." : "Next"}
-          </button>
+          <div className="flex flex-wrap items-center gap-3">
+            <button
+              type="submit"
+              className="h-12 min-w-[176px] rounded-[6px] bg-[#f9fafb] px-5 text-sm font-semibold text-[#1B5DEF] transition hover:bg-[#f1f4ff]"
+              aria-label={
+                editingIndex !== null ? "Update question" : "Add question"
+              }
+            >
+              + Add Question
+            </button>
+            <button
+              type="button"
+              onClick={handleSaveAndContinue}
+              className="btn-primary flex h-12 min-w-[176px] items-center justify-center gap-2 bg-[#7284ff] hover:bg-[#6175f2]"
+              disabled={submitting || questions.length === 0}
+            >
+              {submitting ? <span className="spinner h-4 w-4"></span> : null}
+              {submitting ? "Saving..." : "Next"}
+            </button>
+          </div>
         </div>
       </section>
     </div>

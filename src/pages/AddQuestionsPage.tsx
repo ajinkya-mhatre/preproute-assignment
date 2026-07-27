@@ -1,9 +1,42 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { useForm } from "react-hook-form";
+import { Controller, useForm, useWatch } from "react-hook-form";
 import { useTestStore } from "../store/testStore";
 import { api } from "../api/endpoints";
 import type { Question, Subject, SubTopic, Topic } from "../types";
+import CustomSelect from "../components/common/CustomSelect.tsx";
+
+const difficultyOptions = [
+  { id: "easy", name: "Easy" },
+  { id: "medium", name: "Medium" },
+  { id: "difficult", name: "Difficult" },
+];
+
+const correctOptionOptions = [
+  { id: "option1", name: "A" },
+  { id: "option2", name: "B" },
+  { id: "option3", name: "C" },
+  { id: "option4", name: "D" },
+];
+
+const optionFields = [
+  { name: "option1", label: "A" },
+  { name: "option2", label: "B" },
+  { name: "option3", label: "C" },
+  { name: "option4", label: "D" },
+] as const;
+
+const toolButtons = [
+  "I",
+  "B",
+  "U",
+  "S",
+  "link",
+  "list",
+  "align",
+  "image",
+  "fx",
+];
 
 const AddQuestionsPage = () => {
   const { id } = useParams<{ id: string }>();
@@ -27,7 +60,7 @@ const AddQuestionsPage = () => {
     handleSubmit,
     reset,
     setValue,
-    watch,
+    control,
     formState: { errors },
   } = useForm({
     defaultValues: {
@@ -46,7 +79,7 @@ const AddQuestionsPage = () => {
     },
   });
 
-  const watchTopic = watch("topic");
+  const watchTopic = useWatch({ control, name: "topic" });
 
   useEffect(() => {
     const fetchCurrentTest = async () => {
@@ -61,7 +94,7 @@ const AddQuestionsPage = () => {
       }
     };
     void fetchCurrentTest();
-  }, [id]);
+  }, [id, setCurrentTest]);
 
   useEffect(() => {
     const fetchSubjects = async () => {
@@ -89,7 +122,10 @@ const AddQuestionsPage = () => {
   useEffect(() => {
     if (!currentTest?.subject) return;
     const subjectId =
-      subjects.find((s) => s.name === currentTest.subject)?.id || "";
+      subjects.find((s) => s.id === currentTest.subject)?.id ||
+      subjects.find((s) => s.name === currentTest.subject)?.id ||
+      "";
+    if (!subjectId) return;
     const fetchTopics = async () => {
       try {
         const res = await api.getTopicsBySubject(subjectId);
@@ -101,7 +137,7 @@ const AddQuestionsPage = () => {
       }
     };
     fetchTopics();
-  }, [currentTest?.subject]);
+  }, [currentTest?.subject, subjects]);
 
   useEffect(() => {
     if (!watchTopic) {
@@ -203,6 +239,7 @@ const AddQuestionsPage = () => {
     try {
       const questionData = questions.map((q) => ({
         type: q.type,
+        subject: currentTest?.subject || "",
         question: q.question,
         option1: q.option1,
         option2: q.option2,
@@ -212,8 +249,8 @@ const AddQuestionsPage = () => {
         explanation: q.explanation || "",
         difficulty: q.difficulty || "medium",
         test_id: id,
-        topic: q.topic || "",
-        sub_topic: q.sub_topic || "",
+        topic: topics.find((t) => t.id === q.topic)?.name || q.topic || "",
+        sub_topic: subTopics.find((st) => st.id === q.sub_topic)?.name || "",
         media_url: q.media_url || "",
       }));
 
@@ -228,321 +265,482 @@ const AddQuestionsPage = () => {
   };
 
   const subjectName =
+    subjects.find((s) => s.id === currentTest?.subject)?.name ||
     subjects.find((s) => s.name === currentTest?.subject)?.name ||
     currentTest?.subject ||
     "-";
 
+  const topicSummary =
+    topics
+      .filter((topic) => currentTest?.topics?.includes(topic.id))
+      .map((topic) => topic.name)
+      .join(", ") ||
+    currentTest?.topics?.join(", ") ||
+    "-";
+
+  const subTopicSummary =
+    subTopics
+      .filter((subTopic) => currentTest?.sub_topics?.includes(subTopic.id))
+      .map((subTopic) => subTopic.name)
+      .join(", ") ||
+    currentTest?.sub_topics?.join(", ") ||
+    "-";
+
+  const totalQuestions = currentTest?.total_questions || 50;
+  const currentQuestionNumber =
+    editingIndex !== null
+      ? editingIndex + 1
+      : Math.min(questions.length + 1, totalQuestions);
+  const questionRailCount = Math.max(totalQuestions || 6, 6);
+
   return (
-    <div className="max-w-4xl mx-auto">
-      <div className="flex items-center gap-3 mb-4">
-        <button
-          onClick={() => navigate("/")}
-          className="text-[#64748b] hover:text-[#0f172a] transition"
-        >
-          <i className="fas fa-arrow-left"></i>
-        </button>
-        <h1 className="text-2xl font-bold text-[#0f172a]">Add Questions</h1>
-      </div>
-
-      {currentTest && (
-        <div className="bg-white rounded-xl border border-[#e9edf2] p-4 mb-6 flex flex-wrap items-center gap-4 text-sm">
-          <span className="font-medium text-[#0f172a]">{currentTest.name}</span>
-          <span className="text-[#64748b]">|</span>
-          <span className="text-[#64748b]">Subject: {subjectName}</span>
-          <span className="text-[#64748b] hidden sm:inline">|</span>
-          <span className="text-[#64748b] hidden sm:inline">
-            Questions: {questions.length}/{currentTest.total_questions || 0}
-          </span>
-          <span className="ml-auto text-xs bg-[#eef2ff] text-[#4f46e5] px-3 py-1 rounded-full">
-            {Math.max((currentTest.total_questions || 0) - questions.length, 0)}{" "}
-            remaining
-          </span>
-        </div>
-      )}
-
+    <div className="flex min-h-[calc(100vh-132px)] bg-white">
       <input type="hidden" {...register("subject")} />
 
-      <div className="bg-white rounded-xl border border-[#e9edf2] p-6 mb-6">
-        <h3 className="font-semibold text-[#0f172a] mb-4">
-          {editingIndex !== null ? "Edit Question" : "Add New Question"}
-        </h3>
-        <form onSubmit={handleSubmit(onSubmitQuestion)} className="space-y-4">
+      <aside className="hidden w-[180px] shrink-0 border-r border-[#edf0f4] px-3 py-24 xl:block">
+        <div className="mb-6 flex items-center justify-between text-sm font-semibold text-[#7a8193]">
+          <span>Question creation</span>
+          <span className="text-[#7488ff]">«</span>
+        </div>
+        <div className="mb-7 text-sm text-[#7a8193]">
+          Total Questions .{" "}
+          <span className="font-bold text-[#64748b]">{totalQuestions}</span>
+        </div>
+        <div className="space-y-3">
+          {Array.from({ length: Math.min(questionRailCount, 8) }).map(
+            (_, index) => {
+              const isAdded = index < questions.length;
+              const isCurrent = index + 1 === currentQuestionNumber;
+              return (
+                <button
+                  key={index}
+                  type="button"
+                  onClick={() => isAdded && handleEditQuestion(index)}
+                  className={`flex h-9 w-full items-center justify-between rounded-[7px] border px-3 text-xs font-semibold transition ${
+                    isAdded || isCurrent
+                      ? "border-[#7bdcb5] bg-white text-[#22b07d]"
+                      : "border-[#edf0f4] bg-white text-[#d2d7df]"
+                  }`}
+                >
+                  <span className="flex items-center gap-2">
+                    <span
+                      className={`h-2.5 w-2.5 rounded-full ${
+                        isAdded ? "bg-[#23b37c]" : "bg-[#d7dce4]"
+                      }`}
+                    />
+                    Question {index + 1}
+                  </span>
+                  <span>»</span>
+                </button>
+              );
+            },
+          )}
+        </div>
+      </aside>
+
+      <section className="min-w-0 flex-1 px-4 pb-8 sm:px-6 lg:px-8">
+        <form onSubmit={handleSubmit(onSubmitQuestion)} className="space-y-8">
+          <div className="rounded-[8px] border border-[#e4e8ef] bg-white p-4 sm:p-5">
+            <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+              <span className="rounded-full bg-[#090642] px-4 py-1 text-xs font-semibold text-white">
+                Chapter Wise
+              </span>
+              <button
+                type="button"
+                className="flex h-8 w-8 items-center justify-center rounded-md text-[#7383ff] transition hover:bg-[#f1f4ff]"
+                aria-label="Edit chapter details"
+              >
+                <i className="fas fa-pen text-sm"></i>
+              </button>
+            </div>
+            <div className="flex flex-wrap items-center gap-3">
+              <div className="flex items-center gap-2">
+                <span className="text-lg">♟</span>
+                <h2 className="text-base font-bold text-[#111827]">
+                  {currentTest?.name || "Chapter 1"}
+                </h2>
+              </div>
+              <span className="rounded-[6px] bg-[#25b9ad] uppercase px-5 py-1.5 text-xs font-semibold text-white">
+                {currentTest?.difficulty || "Easy"}
+              </span>
+            </div>
+            <div className="mt-5 grid gap-3 text-sm md:grid-cols-[1fr_auto]">
+              <div className="space-y-3">
+                <p className="grid grid-cols-[92px_1fr] text-[#7c8598]">
+                  <span>Subject</span>
+                  <span className="font-semibold text-[#707589]">
+                    : {subjectName}
+                  </span>
+                </p>
+                <p className="grid grid-cols-[92px_1fr] text-[#7c8598]">
+                  <span>Topic</span>
+                  <span className="font-semibold text-[#707589]">
+                    :{" "}
+                    <span className="border p-1 rounded-md border-yellow-500 text-yellow-400">
+                      {topicSummary}
+                    </span>
+                  </span>
+                </p>
+                <p className="grid grid-cols-[92px_1fr] text-[#7c8598]">
+                  <span>Sub Topic</span>
+                  <span className="font-semibold  w-fit ">
+                    :{" "}
+                    <span className="border p-1 rounded-md border-yellow-500 text-yellow-400">
+                      {subTopicSummary}
+                    </span>
+                  </span>
+                </p>
+              </div>
+              <div className="flex flex-wrap items-center gap-3 self-end rounded-[6px] border border-[#eef1f5] px-3 py-2 text-sm font-semibold text-[#667085]">
+                <span className="flex items-center gap-1">
+                  <img
+                    src={"../../src/assets/clock.svg"}
+                    alt="Book Creation"
+                    className="h-4 w-4"
+                  />
+                  {currentTest?.total_time || 60} Min
+                </span>
+                <span className="h-5 w-px bg-[#e4e8ef]" />
+                <span className="flex items-center gap-1">
+                  <img
+                    src={"../../src/assets/quiz.svg"}
+                    alt="Book Creation"
+                    className="h-4 w-4"
+                  />
+                  {totalQuestions} Q's
+                </span>
+                <span className="h-5 w-px bg-[#e4e8ef]" />
+                <span className="flex items-center gap-1">
+                  <img
+                    src={"../../src/assets/leaderboard.svg"}
+                    alt="Book Creation"
+                    className="h-4 w-4"
+                  />
+                  {currentTest?.total_marks || 250} Marks
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex flex-wrap items-center justify-between gap-4">
+            <h3 className="text-base font-bold text-[#100a4d]">
+              Question {currentQuestionNumber}
+              <span className="text-[#8aa0ff]">/{totalQuestions}</span>
+            </h3>
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                className="h-10 rounded-[6px] bg-[#fafafa] px-4 text-sm font-semibold text-[#98a2b3]"
+              >
+                + MCQ
+              </button>
+              <button
+                type="button"
+                className="h-10 rounded-[6px] bg-[#fafafa] px-4 text-sm font-semibold text-[#98a2b3] flex items-center gap-2"
+              >
+                <img
+                  src={"../../src/assets/download.svg"}
+                  alt="Book Creation"
+                  className="h-5 w-5"
+                />{" "}
+                CSV
+              </button>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            onClick={handleCancelEdit}
+            className="text-sm font-semibold text-[#ff7479] flex items-center gap-2 bg-red-50 p-1.5 rounded-md transition"
+          >
+            <img
+              src={"../../src/assets/delete.svg"}
+              alt="Book Creation"
+              className="h-4 w-4"
+            />{" "}
+            Delete All Edits
+          </button>
+
           <div>
-            <label className="block text-sm font-medium text-[#1e293b] mb-1">
-              Question Text *
-            </label>
-            <textarea
-              {...register("question", { required: "Question is required" })}
-              className={`w-full p-3 border rounded-lg text-sm min-h-[80px] ${errors.question ? "border-red-500" : "border-[#e2e8f0]"}`}
-              placeholder="Type your question here..."
-            />
+            <div
+              className={`overflow-hidden rounded-[6px] border bg-white ${
+                errors.question ? "border-red-400" : "border-[#c9dcff]"
+              }`}
+            >
+              <div className="flex h-11 items-center gap-1 border-b border-[#edf0f4] px-4 text-[#818999]">
+                {toolButtons.map((item) => (
+                  <button
+                    type="button"
+                    key={item}
+                    className="flex h-7 min-w-7 items-center justify-center rounded text-xs font-semibold hover:bg-[#f4f6f9]"
+                  >
+                    {item}
+                  </button>
+                ))}
+              </div>
+              <div className="relative">
+                <textarea
+                  {...register("question", {
+                    required: "Question is required",
+                  })}
+                  className="min-h-[166px] w-full resize-y border-0 px-5 py-4 text-sm text-[#111827] outline-none placeholder:text-[#a7afbd]"
+                  placeholder="Type here"
+                />
+                <button
+                  type="button"
+                  onClick={() => setValue("question", "")}
+                  className="absolute right-4 top-4 text-[#c9ced8]"
+                  aria-label="Clear question"
+                >
+                  <i className="far fa-trash-alt"></i>
+                </button>
+              </div>
+            </div>
             {errors.question && (
-              <p className="text-red-500 text-xs mt-1">
+              <p className="mt-1 text-xs text-red-500">
                 {errors.question.message}
               </p>
             )}
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-[#1e293b] mb-1">
-                Option A *
-              </label>
-              <input
-                {...register("option1", { required: "Option A is required" })}
-                className={`w-full p-3 border rounded-lg text-sm ${errors.option1 ? "border-red-500" : "border-[#e2e8f0]"}`}
-                placeholder="Type Option here"
-              />
-              {errors.option1 && (
-                <p className="text-red-500 text-xs mt-1">
-                  {errors.option1.message}
-                </p>
-              )}
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-[#1e293b] mb-1">
-                Option B *
-              </label>
-              <input
-                {...register("option2", { required: "Option B is required" })}
-                className={`w-full p-3 border rounded-lg text-sm ${errors.option2 ? "border-red-500" : "border-[#e2e8f0]"}`}
-                placeholder="Type Option here"
-              />
-              {errors.option2 && (
-                <p className="text-red-500 text-xs mt-1">
-                  {errors.option2.message}
-                </p>
-              )}
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-[#1e293b] mb-1">
-                Option C *
-              </label>
-              <input
-                {...register("option3", { required: "Option C is required" })}
-                className={`w-full p-3 border rounded-lg text-sm ${errors.option3 ? "border-red-500" : "border-[#e2e8f0]"}`}
-                placeholder="Type Option here"
-              />
-              {errors.option3 && (
-                <p className="text-red-500 text-xs mt-1">
-                  {errors.option3.message}
-                </p>
-              )}
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-[#1e293b] mb-1">
-                Option D *
-              </label>
-              <input
-                {...register("option4", { required: "Option D is required" })}
-                className={`w-full p-3 border rounded-lg text-sm ${errors.option4 ? "border-red-500" : "border-[#e2e8f0]"}`}
-                placeholder="Type Option here"
-              />
-              {errors.option4 && (
-                <p className="text-red-500 text-xs mt-1">
-                  {errors.option4.message}
-                </p>
-              )}
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-[#1e293b] mb-1">
-                Correct Option *
-              </label>
-              <select
-                {...register("correct_option")}
-                className="w-full p-3 border border-[#e2e8f0] rounded-lg text-sm"
-              >
-                <option value="option1">A</option>
-                <option value="option2">B</option>
-                <option value="option3">C</option>
-                <option value="option4">D</option>
-              </select>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-[#1e293b] mb-1">
-                Difficulty
-              </label>
-              <select
-                {...register("difficulty")}
-                className="w-full p-3 border border-[#e2e8f0] rounded-lg text-sm"
-              >
-                <option value="easy">Easy</option>
-                <option value="medium">Medium</option>
-                <option value="difficult">Difficult</option>
-              </select>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-[#1e293b] mb-1">
-                Topic
-              </label>
-              <select
-                {...register("topic")}
-                className="w-full p-3 border border-[#e2e8f0] rounded-lg text-sm"
-              >
-                <option value="">Select Topic</option>
-                {topics.map((t) => (
-                  <option key={t.id} value={t.id}>
-                    {t.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-[#1e293b] mb-1">
-                Sub Topic
-              </label>
-              <select
-                {...register("sub_topic")}
-                className="w-full p-3 border border-[#e2e8f0] rounded-lg text-sm"
-                disabled={!watchTopic}
-              >
-                <option value="">Select Sub Topic</option>
-                {subTopics.map((st) => (
-                  <option key={st.id} value={st.id}>
-                    {st.name}
-                  </option>
-                ))}
-              </select>
+          <div>
+            <h3 className="mb-4 text-base font-bold text-[#111827]">
+              Type the options below
+            </h3>
+            <div className="space-y-5">
+              {optionFields.map((field) => (
+                <div key={field.name}>
+                  <div className="flex items-center gap-4">
+                    <span className="h-5 w-5 shrink-0 rounded-full border-2 border-[#7587ff]" />
+                    <div
+                      className={`flex h-12 flex-1 items-center rounded-[6px] border bg-white ${
+                        errors[field.name]
+                          ? "border-red-400"
+                          : "border-[#e1e6ee]"
+                      }`}
+                    >
+                      <input
+                        {...register(field.name, {
+                          required: `Option ${field.label} is required`,
+                        })}
+                        className="h-full min-w-0 flex-1 rounded-[6px] px-5 text-sm text-[#111827] outline-none placeholder:text-[#a7afbd]"
+                        placeholder="Type Option here"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setValue(field.name, "")}
+                        className="flex h-full w-12 items-center justify-center text-[#c9ced8]"
+                        aria-label={`Clear option ${field.label}`}
+                      >
+                        <i className="far fa-trash-alt"></i>
+                      </button>
+                    </div>
+                  </div>
+                  {errors[field.name] && (
+                    <p className="ml-9 mt-1 text-xs text-red-500">
+                      {errors[field.name]?.message}
+                    </p>
+                  )}
+                </div>
+              ))}
             </div>
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-[#1e293b] mb-1">
-              Explanation (Optional)
-            </label>
-            <textarea
-              {...register("explanation")}
-              className="w-full p-3 border border-[#e2e8f0] rounded-lg text-sm min-h-[60px]"
-              placeholder="Add solution/explanation here..."
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-[#1e293b] mb-1">
-              Media URL (Optional)
-            </label>
-            <input
-              {...register("media_url")}
-              className="w-full p-3 border border-[#e2e8f0] rounded-lg text-sm"
-              placeholder="https://example.com/image.png"
-            />
-          </div>
-
-          <div className="flex items-center gap-3 pt-2">
-            <button
-              type="submit"
-              className="btn-primary flex items-center gap-2"
-            >
-              <i className="fas fa-plus"></i>
-              {editingIndex !== null ? "Update Question" : "Add Question"}
-            </button>
-            {editingIndex !== null && (
+            <h3 className="mb-4 text-base font-bold text-[#111827]">
+              Add Solution
+            </h3>
+            <div className="relative rounded-[6px] border border-[#e1e6ee] bg-white">
+              <textarea
+                {...register("explanation")}
+                className="min-h-[146px] w-full resize-y rounded-[6px] px-5 py-4 text-sm text-[#111827] outline-none placeholder:text-[#a7afbd]"
+                placeholder="Type here"
+              />
               <button
                 type="button"
-                onClick={handleCancelEdit}
-                className="btn-secondary"
+                onClick={() => setValue("explanation", "")}
+                className="absolute right-4 top-4 text-[#c9ced8]"
+                aria-label="Clear solution"
               >
-                Cancel Edit
+                <i className="far fa-trash-alt"></i>
               </button>
-            )}
+            </div>
           </div>
-        </form>
-      </div>
 
-      <div className="mb-6">
-        <div className="flex items-center justify-between mb-3">
-          <h3 className="font-semibold text-[#0f172a]">
-            Added Questions ({questions.length})
-          </h3>
-        </div>
-        {questions.length === 0 ? (
-          <div className="text-center py-8 bg-white rounded-xl border border-[#e9edf2] text-[#94a3b8] text-sm">
-            <i className="fas fa-question-circle text-3xl mb-2 block"></i>
-            No questions added yet.
+          <div className="flex items-center justify-center gap-40 py-2 text-[#a7afbd]">
+            <button
+              type="button"
+              className="text-2xl"
+              aria-label="Previous question"
+            >
+              ‹
+            </button>
+            <button
+              type="submit"
+              className="text-2xl"
+              aria-label={
+                editingIndex !== null ? "Update question" : "Add question"
+              }
+            >
+              ›
+            </button>
           </div>
-        ) : (
-          <div className="space-y-3">
-            {questions.map((q, idx) => (
-              <div key={idx} className="question-card">
-                <div className="flex items-start justify-between gap-3">
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className="text-xs font-medium bg-[#eef2ff] text-[#4f46e5] px-2 py-0.5 rounded-full">
-                        Q{idx + 1}
-                      </span>
-                      <span className="text-xs text-[#94a3b8]">
-                        {q.difficulty || "medium"}
-                      </span>
-                    </div>
-                    <p className="text-[#0f172a] font-medium text-sm">
-                      {q.question}
-                    </p>
-                    <div className="flex flex-wrap gap-1 mt-2">
-                      {["option1", "option2", "option3", "option4"].map(
-                        (opt, i) => (
-                          <span
-                            key={opt}
-                            className={`option-tag ${q.correct_option === opt ? "correct" : ""}`}
-                          >
-                            {String.fromCharCode(65 + i)}.{" "}
-                            {q[opt as keyof Question] as string}
-                          </span>
-                        ),
-                      )}
-                    </div>
-                    {q.explanation && (
-                      <p className="text-xs text-[#64748b] mt-1">
-                        <i className="fas fa-lightbulb text-[#f59e0b] mr-1"></i>
-                        {q.explanation}
-                      </p>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-1 flex-shrink-0">
-                    <button
-                      onClick={() => handleEditQuestion(idx)}
-                      className="p-1.5 text-[#64748b] hover:text-[#4f46e5] rounded-lg hover:bg-[#eef2ff] transition"
-                      title="Edit"
-                    >
-                      <i className="fas fa-pen text-sm"></i>
-                    </button>
-                    <button
-                      onClick={() => {
-                        if (confirm("Remove this question?")) {
-                          removeQuestion(idx);
-                        }
-                      }}
-                      className="p-1.5 text-[#64748b] hover:text-[#ef4444] rounded-lg hover:bg-[#fee2e2] transition"
-                      title="Remove"
-                    >
-                      <i className="fas fa-trash text-sm"></i>
-                    </button>
-                  </div>
-                </div>
+
+          <div className="space-y-5">
+            <h3 className="text-base font-bold text-[#4b5568]">
+              Question settings
+            </h3>
+            <div className="grid gap-5">
+              <div>
+                <label className="mb-3 block text-sm font-semibold text-[#4b5568]">
+                  Level of Difficulty
+                </label>
+                <Controller
+                  name="difficulty"
+                  control={control}
+                  render={({ field }) => (
+                    <CustomSelect
+                      value={field.value}
+                      onChange={field.onChange}
+                      options={difficultyOptions}
+                      placeholder="Select from Drop-down"
+                    />
+                  )}
+                />
               </div>
-            ))}
+              <div>
+                <label className="mb-3 block text-sm font-semibold text-[#4b5568]">
+                  Correct Option
+                </label>
+                <Controller
+                  name="correct_option"
+                  control={control}
+                  render={({ field }) => (
+                    <CustomSelect
+                      value={field.value}
+                      onChange={field.onChange}
+                      options={correctOptionOptions}
+                      placeholder="Select from Drop-down"
+                    />
+                  )}
+                />
+              </div>
+              <div>
+                <label className="mb-3 block text-sm font-semibold text-[#4b5568]">
+                  Topic
+                </label>
+                <Controller
+                  name="topic"
+                  control={control}
+                  render={({ field }) => (
+                    <CustomSelect
+                      value={field.value}
+                      onChange={field.onChange}
+                      options={topics}
+                      placeholder="Select from Drop-down"
+                    />
+                  )}
+                />
+              </div>
+              <div>
+                <label className="mb-3 block text-sm font-semibold text-[#4b5568]">
+                  Sub-topic
+                </label>
+                <Controller
+                  name="sub_topic"
+                  control={control}
+                  render={({ field }) => (
+                    <CustomSelect
+                      value={field.value}
+                      onChange={field.onChange}
+                      options={subTopics}
+                      placeholder="Select from Drop-down"
+                      disabled={!watchTopic}
+                    />
+                  )}
+                />
+              </div>
+              <div>
+                <label className="mb-3 block text-sm font-semibold text-[#4b5568]">
+                  Media URL
+                </label>
+                <input
+                  {...register("media_url")}
+                  className="h-11 w-full rounded-[6px] border border-[#d0d5dd] bg-white px-4 text-sm text-[#111827] outline-none transition placeholder:text-[#98a2b3] focus:border-[#1B5DEF] focus:ring-2 focus:ring-[#dbe7ff]"
+                  placeholder="https://example.com/image.png"
+                />
+              </div>
+            </div>
           </div>
-        )}
-      </div>
 
-      <div className="flex items-center justify-between gap-3 pt-2">
-        <button
-          onClick={() => navigate("/")}
-          className="btn-secondary flex items-center gap-2"
-        >
-          <i className="fas fa-times"></i> Exit Test Creation
-        </button>
-        <button
-          onClick={handleSaveAndContinue}
-          className="btn-primary flex items-center gap-2"
-          disabled={submitting || questions.length === 0}
-        >
-          {submitting ? <span className="spinner w-4 h-4"></span> : null}
-          {submitting ? "Saving..." : "Save & Continue"}
-        </button>
-      </div>
+          {questions.length > 0 && (
+            <div className="rounded-[8px] border border-[#edf0f4] bg-[#fbfcfd] p-4">
+              <h3 className="mb-3 text-sm font-bold text-[#4b5568]">
+                Added Questions ({questions.length})
+              </h3>
+              <div className="grid gap-3 lg:grid-cols-2">
+                {questions.map((q, idx) => (
+                  <div
+                    key={idx}
+                    className="rounded-[6px] border border-[#e5e7eb] bg-white p-3"
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="mb-1 text-xs font-bold text-[#7488ff]">
+                          Q{idx + 1}
+                        </p>
+                        <p className="truncate text-sm font-semibold text-[#111827]">
+                          {q.question}
+                        </p>
+                      </div>
+                      <div className="flex shrink-0 items-center gap-1">
+                        <button
+                          type="button"
+                          onClick={() => handleEditQuestion(idx)}
+                          className="p-1.5 text-[#667085] hover:text-[#1B5DEF]"
+                          title="Edit"
+                        >
+                          <i className="fas fa-pen text-xs"></i>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (confirm("Remove this question?"))
+                              removeQuestion(idx);
+                          }}
+                          className="p-1.5 text-[#667085] hover:text-[#ef4444]"
+                          title="Remove"
+                        >
+                          <i className="fas fa-trash text-xs"></i>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </form>
+
+        <div className="mt-8 flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <button
+            type="button"
+            onClick={() => navigate("/")}
+            className="h-12 rounded-[6px] bg-[#ff7075] px-5 text-sm font-bold text-white transition hover:bg-[#ef5e64]"
+          >
+            Exit Test Creation
+          </button>
+          <button
+            type="button"
+            onClick={handleSaveAndContinue}
+            className="btn-primary flex h-12 min-w-[176px] items-center justify-center gap-2 bg-[#7284ff] hover:bg-[#6175f2]"
+            disabled={submitting || questions.length === 0}
+          >
+            {submitting ? <span className="spinner h-4 w-4"></span> : null}
+            {submitting ? "Saving..." : "Next"}
+          </button>
+        </div>
+      </section>
     </div>
   );
 };

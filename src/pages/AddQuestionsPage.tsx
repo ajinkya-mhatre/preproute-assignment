@@ -1,11 +1,11 @@
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { useTestStore } from "../store/testStore";
 import { api } from "../api/endpoints";
-import type { Question, SubTopic, Topic } from "../types";
+import type { Question, Subject, SubTopic, Topic } from "../types";
 
-const AddQuestionsPage: React.FC = () => {
+const AddQuestionsPage = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { currentTest, questions, setQuestions, addQuestion, removeQuestion } =
@@ -13,6 +13,7 @@ const AddQuestionsPage: React.FC = () => {
   const [submitting, setSubmitting] = useState(false);
   const [topics, setTopics] = useState<Topic[]>([]);
   const [subTopics, setSubTopics] = useState<SubTopic[]>([]);
+  const [subjects, setSubjects] = useState<Subject[]>([]);
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
 
   const {
@@ -35,10 +36,34 @@ const AddQuestionsPage: React.FC = () => {
       topic: "",
       sub_topic: "",
       media_url: "",
+      subject: "",
     },
   });
 
   const watchTopic = watch("topic");
+
+  useEffect(() => {
+    const fetchSubjects = async () => {
+      try {
+        const res = await api.getSubjects();
+        if (res.data?.status === "success" && Array.isArray(res.data.data)) {
+          setSubjects(res.data.data);
+        }
+      } catch (err) {
+        console.log("Failed to load subjects", "error");
+      }
+    };
+    fetchSubjects();
+  }, []);
+
+  useEffect(() => {
+    if (!currentTest?.subject) return;
+    const subjectId =
+      subjects.find((s) => s.id === currentTest.subject)?.id ||
+      subjects.find((s) => s.name === currentTest.subject)?.id ||
+      "";
+    setValue("subject", subjectId);
+  }, [currentTest?.subject, subjects, setValue]);
 
   useEffect(() => {
     if (!currentTest?.subject) return;
@@ -204,6 +229,8 @@ const AddQuestionsPage: React.FC = () => {
           </span>
         </div>
       )}
+
+      <input type="hidden" {...register("subject")} />
 
       <div className="bg-white rounded-xl border border-[#e9edf2] p-6 mb-6">
         <h3 className="font-semibold text-[#0f172a] mb-4">

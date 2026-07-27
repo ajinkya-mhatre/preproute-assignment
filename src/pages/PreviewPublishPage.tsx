@@ -1,10 +1,10 @@
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useTestStore } from "../store/testStore";
 import { api } from "../api/endpoints";
 import type { Question } from "../types";
 
-const PreviewPublishPage: React.FC = () => {
+const PreviewPublishPage = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { currentTest, setCurrentTest, questions, setQuestions } =

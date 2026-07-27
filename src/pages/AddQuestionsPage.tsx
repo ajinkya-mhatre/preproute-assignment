@@ -8,8 +8,14 @@ import type { Question, Subject, SubTopic, Topic } from "../types";
 const AddQuestionsPage = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { currentTest, questions, setQuestions, addQuestion, removeQuestion } =
-    useTestStore();
+  const {
+    currentTest,
+    questions,
+    setQuestions,
+    addQuestion,
+    removeQuestion,
+    setCurrentTest,
+  } = useTestStore();
   const [submitting, setSubmitting] = useState(false);
   const [topics, setTopics] = useState<Topic[]>([]);
   const [subTopics, setSubTopics] = useState<SubTopic[]>([]);
@@ -43,6 +49,21 @@ const AddQuestionsPage = () => {
   const watchTopic = watch("topic");
 
   useEffect(() => {
+    const fetchCurrentTest = async () => {
+      if (!id) return;
+      try {
+        const res = await api.getTestById(id);
+        if (res.data.status === "success") {
+          setCurrentTest(res.data.data);
+        }
+      } catch (err) {
+        console.log("Failed to load test", "error");
+      }
+    };
+    void fetchCurrentTest();
+  }, [id]);
+
+  useEffect(() => {
     const fetchSubjects = async () => {
       try {
         const res = await api.getSubjects();
@@ -57,7 +78,7 @@ const AddQuestionsPage = () => {
   }, []);
 
   useEffect(() => {
-    if (!currentTest?.subject) return;
+    if (!currentTest?.subject || subjects.length === 0) return;
     const subjectId =
       subjects.find((s) => s.id === currentTest.subject)?.id ||
       subjects.find((s) => s.name === currentTest.subject)?.id ||
@@ -67,27 +88,33 @@ const AddQuestionsPage = () => {
 
   useEffect(() => {
     if (!currentTest?.subject) return;
+    const subjectId =
+      subjects.find((s) => s.name === currentTest.subject)?.id || "";
     const fetchTopics = async () => {
       try {
-        const res = await api.getTopicsBySubject(currentTest.subject);
-        if (res.data.success) setTopics(res.data.data || []);
+        const res = await api.getTopicsBySubject(subjectId);
+        if (res.data?.status === "success" && Array.isArray(res.data.data)) {
+          setTopics(res.data.data);
+        }
       } catch (err) {
         console.log("Failed to load topics", "error");
       }
     };
-    void fetchTopics();
+    fetchTopics();
   }, [currentTest?.subject]);
 
   useEffect(() => {
     if (!watchTopic) {
       setSubTopics([]);
-      setValue("sub_topic", "");
+      setValue("sub_topic", "", { shouldValidate: false });
       return;
     }
     const fetchSubTopics = async () => {
       try {
         const res = await api.getSubTopicsByTopic(watchTopic);
-        if (res.data.success) setSubTopics(res.data.data || []);
+        if (res.data?.status === "success" && Array.isArray(res.data.data)) {
+          setSubTopics(res.data.data);
+        }
       } catch (err) {
         console.log("Failed to load sub-topics", "error");
       }
@@ -200,6 +227,11 @@ const AddQuestionsPage = () => {
     }
   };
 
+  const subjectName =
+    subjects.find((s) => s.name === currentTest?.subject)?.name ||
+    currentTest?.subject ||
+    "-";
+
   return (
     <div className="max-w-4xl mx-auto">
       <div className="flex items-center gap-3 mb-4">
@@ -216,9 +248,7 @@ const AddQuestionsPage = () => {
         <div className="bg-white rounded-xl border border-[#e9edf2] p-4 mb-6 flex flex-wrap items-center gap-4 text-sm">
           <span className="font-medium text-[#0f172a]">{currentTest.name}</span>
           <span className="text-[#64748b]">|</span>
-          <span className="text-[#64748b]">
-            Subject: {currentTest.subject || "-"}
-          </span>
+          <span className="text-[#64748b]">Subject: {subjectName}</span>
           <span className="text-[#64748b] hidden sm:inline">|</span>
           <span className="text-[#64748b] hidden sm:inline">
             Questions: {questions.length}/{currentTest.total_questions || 0}

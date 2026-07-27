@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { api } from "../api/endpoints";
 import { useTestStore } from "../store/testStore";
+import CustomSelect from "../components/common/CustomSelect.tsx";
 
 const DashboardPage = () => {
   const navigate = useNavigate();
@@ -45,7 +46,7 @@ const DashboardPage = () => {
   };
 
   return (
-    <section className="space-y-6">
+    <section className="space-y-6 bg-white px-4">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="text-left">
           <h1 className="text-2xl font-semibold text-[#111827]">
@@ -71,16 +72,17 @@ const DashboardPage = () => {
           placeholder="Search by test name or subject"
           className="h-11 rounded-[6px] border border-[#d0d5dd] px-4 text-sm text-[#111827] outline-none transition placeholder:text-[#98a2b3] focus:border-[#1B5DEF] focus:ring-2 focus:ring-[#dbe7ff]"
         />
-        <select
+        <CustomSelect
           value={statusFilter}
-          onChange={(event) => setStatusFilter(event.target.value)}
-          className="h-11 rounded-[6px] border border-[#d0d5dd] bg-white px-4 text-sm text-[#667085] outline-none transition focus:border-[#1B5DEF] focus:ring-2 focus:ring-[#dbe7ff]"
-        >
-          <option value="all">All status</option>
-          <option value="draft">Draft</option>
-          <option value="live">Live</option>
-          <option value="archived">Archived</option>
-        </select>
+          onChange={(event) => setStatusFilter(event)}
+          options={[
+            { id: "all", name: "All status" },
+            { id: "draft", name: "Draft" },
+            { id: "live", name: "Live" },
+            { id: "archived", name: "Archived" },
+          ]}
+          placeholder="Filter by status"
+        />
       </div>
 
       <div className="overflow-hidden rounded-[8px] border border-[#e5e7eb] bg-white">
